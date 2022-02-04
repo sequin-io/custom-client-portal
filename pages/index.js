@@ -33,6 +33,7 @@ export default function Home(props) {
     const getClientProjects = async () => {
             const resp = await fetch("/api/projects", {
                 method: 'POST',
+                //Send the user's token and email in the request body
                 body: JSON.stringify({
                     session_token: user.session_token,
                     email: user.email

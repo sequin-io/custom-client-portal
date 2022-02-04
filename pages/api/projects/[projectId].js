@@ -2,6 +2,8 @@ import Airtable from "airtable";
 import loadStytch from '../../lib/loadStytch';
 
 const client = loadStytch();
+
+// Instantiate the Airtable client using the Sequin proxy
 const base = new Airtable({
     apiKey: process.env.AIRTABLE_API_KEY,
     endpointUrl: "https://proxy.syncinc.so/api.airtable.com",
@@ -9,6 +11,8 @@ const base = new Airtable({
 
 export default async (req, res) => {
     const { projectId } = req.query;
+
+    //User's token is passed through in the request body  
     const body = JSON.parse(req.body)
     
     try {
