@@ -6,7 +6,7 @@ const client = loadStytch();
 // Instantiate the Airtable client using the Sequin proxy
 const base = new Airtable({
     apiKey: process.env.AIRTABLE_API_KEY,
-    endpointUrl: "https://proxy.syncinc.so/api.airtable.com",
+    endpointUrl: "https://proxy.sequin.io/api.airtable.com",
 }).base(process.env.AIRTABLE_BASE);
 
 export default async (req, res) => {
