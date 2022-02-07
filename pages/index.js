@@ -1,49 +1,48 @@
 import Head from 'next/head'
 import styles from '../styles/Home.module.css'
-import Cotter from "cotter";
 import { useEffect, useState } from "react";
-const cotterApiKeyId = process.env.NEXT_PUBLIC_COTTER_API_KEY_ID;
+import LoginWithMagicLinks from './components/LoginWithMagicLinks';
+import withSession from './lib/withSession';
 
-export default function Home() {
+export default function Home(props) {
+    //This state holds the projects associated with the user
     const [clientProjects, setClientProjects] = useState(null);
-
-    // Gets this client's projects when they're logged in
-    const getClientProjects = async () => {
-        const token = localStorage.getItem("ACCESS_TOKEN");
-        const resp = await fetch("/api/projects", {
-            headers: { Authorization: `Bearer ${token}` },
-        });
-        setClientProjects(await resp.json());
-    };
-
+    
+    //This state contains the logged in status of the user
     const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-    // Shows the Cotter Login form and sets Access Token when authenticated
-    useEffect(() => {
-        const cotter = new Cotter(cotterApiKeyId);
-        cotter
-            .signInWithOTP()
-            .showEmailForm()
-            .then(payload => {
-                localStorage.setItem("ACCESS_TOKEN", payload.oauth_token.access_token);
-                setIsLoggedIn(true);
-                getClientProjects();
-            })
-            .catch(err => console.log(err));
-    }, []);
+    //User's session details
+    const { user } = props
 
     // Sets local isLoggedIn variable
     useEffect(() => {
-        if (localStorage.getItem("ACCESS_TOKEN") != null) {
+        if (user) {
             setIsLoggedIn(true);
+            getClientProjects();
         }
     }, []);
 
-    // Deletes Access Token and logs user out
-    const logOut = () => {
-        localStorage.removeItem("ACCESS_TOKEN");
+    // Logs a user out
+    const logOut = async ()  => {
         setIsLoggedIn(false);
+        
+        const resp = await fetch('/api/logout', { method: 'POST' });
     };
+    
+    // Gets this client's projects when they're logged in
+    const getClientProjects = async () => {
+            const resp = await fetch("/api/projects", {
+                method: 'POST',
+                //Send the user's token and email in the request body
+                body: JSON.stringify({
+                    session_token: user.session_token,
+                    email: user.email
+                })
+            });
+            if (resp.status === 200) {
+                setClientProjects(await resp.json());
+            }
+    } 
 
     // Allow clients to mark a project as complete
     const markProjectComplete = async (e) => {
@@ -55,10 +54,11 @@ export default function Home() {
             return project
         }));
 
-        const token = localStorage.getItem("ACCESS_TOKEN");
         await fetch("/api/projects/" + completeProjectId, {
-            headers: { Authorization: `Bearer ${token}` },
             method: "PUT",
+            body: JSON.stringify({
+                session_token: user.session_token
+            })
         });
     };
 
@@ -94,9 +94,17 @@ export default function Home() {
                         ) : (<p>You currently have no projects attached to this account.</p>)}
                         <p style={{textAlign: "center", cursor: "pointer"}} onClick={logOut}>Log Out</p>
                     </div>
-                ): (<p>Log in to view your projects.</p>)}
-                <div id="cotter-form-container" style={{ width: 300, height: 200 }} />
+                ): (<LoginWithMagicLinks styles={styles} />)}
             </main>
         </div>
     )
 }
+
+const getServerSidePropsHandler = async ({ req }) => {
+    // Get the user's session based on the request
+    const user = req.session.get('user') ?? null;
+    const props = { user } ;
+    return { props };
+  };
+  
+export const getServerSideProps = withSession(getServerSidePropsHandler);
